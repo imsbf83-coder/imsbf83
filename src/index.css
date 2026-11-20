@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1B2438;
+  --color-ink-light: #2A3650;
+  --color-ink-dark: #131B2B;
+  --color-paper: #F5F6F1;
+  --color-brass: #B4903D;
+  --color-brass-light: #D4B366;
+  --color-brass-dark: #8F7130;
+  --color-present: #2F7D5A;
+  --color-absent: #B23A48;
+  --color-late: #C08A2E;
+  --color-slate2: #5B6B7C;
+
+  --font-display: "Source Serif 4", serif;
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+html, body {
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+::selection {
+  background-color: #D4B366;
+  color: #1B2438;
+}
+
+/* visible keyboard focus everywhere */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid #B4903D;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.ledger-heading {
+  border-bottom: 2px solid #1B2438;
+  padding-bottom: 0.5rem;
+}
+
+table.register-table th {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #5B6B7C;
+}

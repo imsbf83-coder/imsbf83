@@ -1,0 +1,17 @@
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'pk.edu.imsbf83.register',
+  appName: 'The Register',
+  webDir: 'dist',
+  server: {
+    androidScheme: 'https',
+  },
+  plugins: {
+    CapacitorHttp: {
+      enabled: true,
+    },
+  },
+};
+
+export default config;
