@@ -3,11 +3,10 @@
 	"appName": "The Register",
 	"webDir": "dist",
 	"server": {
-		"androidScheme": "https"
-	},
-	"plugins": {
-		"CapacitorHttp": {
-			"enabled": true
-		}
+		"url": "https://school-erp-imsbf-83.vercel.app",
+		"androidScheme": "https",
+		"allowNavigation": [
+			"school-erp-imsbf-83.vercel.app"
+		]
 	}
 }

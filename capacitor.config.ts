@@ -5,12 +5,9 @@ const config: CapacitorConfig = {
   appName: 'The Register',
   webDir: 'dist',
   server: {
+    url: 'https://school-erp-imsbf-83.vercel.app',
     androidScheme: 'https',
-  },
-  plugins: {
-    CapacitorHttp: {
-      enabled: true,
-    },
+    allowNavigation: ['school-erp-imsbf-83.vercel.app'],
   },
 };
 

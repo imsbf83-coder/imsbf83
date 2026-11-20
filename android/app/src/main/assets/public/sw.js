@@ -113,6 +113,12 @@ define(['./workbox-afac4cd2'], (function (workbox) { 'use strict';
     "url": "assets/index-BhDRMKgi.css",
     "revision": null
   }, {
+    "url": "assets/aistudio/image_fa239a24.png",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_38acd0cc.png",
+    "revision": null
+  }, {
     "url": "apple-touch-icon.png",
     "revision": "c352f23c6e4165918fee5bb19fd18eda"
   }, {
