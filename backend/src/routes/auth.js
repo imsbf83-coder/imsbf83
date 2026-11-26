@@ -11,7 +11,7 @@ const router = express.Router();
 function signToken(user) {
   return jwt.sign(
     { id: user.id, role: user.role, email: user.email, phone: user.phone, name: user.name },
-    process.env.JWT_SECRET || 'school-erp-dev-secret-change-in-production',
+    process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
   );
 }

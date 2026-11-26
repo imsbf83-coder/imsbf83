@@ -193,6 +193,60 @@ const SCHEMA = {
       user: { type: 'belongsTo', model: 'user', foreignKey: 'userId' },
     },
   },
+  classSubjectTemplate: {
+    defaults: { createdAt: () => new Date(), updatedAt: () => new Date() },
+    uniques: [['id']],
+    relations: {},
+  },
+  timetableTeacher: {
+    defaults: { isActive: true, createdAt: () => new Date(), updatedAt: () => new Date() },
+    uniques: [['id'], ['code']],
+    relations: {
+      staff: { type: 'belongsTo', model: 'staff', foreignKey: 'staffId' },
+      entries: { type: 'hasMany', model: 'timetableEntry', foreignKey: 'teacherId' },
+    },
+  },
+  timetableSlot: {
+    defaults: { isBreak: false, sortOrder: 0 },
+    uniques: [['id']],
+    relations: {
+      entries: { type: 'hasMany', model: 'timetableEntry', foreignKey: 'slotId' },
+    },
+  },
+  timetableSchedule: {
+    defaults: { isActive: true, createdAt: () => new Date(), updatedAt: () => new Date() },
+    uniques: [['id']],
+    relations: {
+      classes: { type: 'hasMany', model: 'timetableScheduleClass', foreignKey: 'scheduleId' },
+    },
+  },
+  timetableScheduleClass: {
+    defaults: {},
+    uniques: [['id']],
+    relations: {
+      schedule: { type: 'belongsTo', model: 'timetableSchedule', foreignKey: 'scheduleId' },
+    },
+  },
+  timetableEntry: {
+    defaults: { createdAt: () => new Date(), updatedAt: () => new Date() },
+    uniques: [['id']],
+    relations: {
+      teacher: { type: 'belongsTo', model: 'timetableTeacher', foreignKey: 'teacherId' },
+      slot: { type: 'belongsTo', model: 'timetableSlot', foreignKey: 'slotId' },
+    },
+  },
+  timetableAbsence: {
+    defaults: { createdAt: () => new Date() },
+    uniques: [['id']],
+    relations: {
+      teacher: { type: 'belongsTo', model: 'timetableTeacher', foreignKey: 'teacherId' },
+    },
+  },
+  timetableArrangement: {
+    defaults: { createdAt: () => new Date() },
+    uniques: [['id']],
+    relations: {},
+  },
 };
 
 const DATE_FIELDS = new Set([

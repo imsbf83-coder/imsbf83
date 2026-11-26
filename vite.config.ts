@@ -5,8 +5,16 @@ import path from 'path';
 import {defineConfig} from 'vite';
 import {VitePWA} from 'vite-plugin-pwa';
 
+const APP_BUILD_ID =
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.GITHUB_SHA ||
+  new Date().toISOString();
+
 export default defineConfig(() => {
   return {
+    define: {
+      __APP_BUILD_ID__: JSON.stringify(APP_BUILD_ID),
+    },
     plugins: [
       react(),
       tailwindcss(),
@@ -52,7 +60,7 @@ export default defineConfig(() => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,jpeg,woff,woff2}'],
-          navigateFallbackDenylist: [/^\/api/],
+          navigateFallbackDenylist: [/^\/api/, /^\/version\.json/],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -89,9 +97,8 @@ export default defineConfig(() => {
           type: 'module',
         },
       }),
-      // Copies src/assets into dist/ so root-relative URLs like
-      // "/src/assets/images/..." (e.g. generate_image output) still resolve
-      // in production builds. Do not remove.
+      // Copies src/assets into dist/ and emits version.json so running web/APK
+      // clients can detect newly deployed builds and prompt the user to update.
       {
         name: 'copy-unbundled-src-assets',
         apply: 'build',
@@ -104,6 +111,19 @@ export default defineConfig(() => {
           const distAssets = path.resolve(distDir, 'src/assets');
           if (fs.existsSync(distDir) && fs.existsSync(srcAssets)) {
             fs.cpSync(srcAssets, distAssets, {recursive: true, force: true});
+          }
+          if (fs.existsSync(distDir)) {
+            fs.writeFileSync(
+              path.join(distDir, 'version.json'),
+              JSON.stringify(
+                {
+                  buildId: APP_BUILD_ID,
+                  builtAt: new Date().toISOString(),
+                },
+                null,
+                2
+              )
+            );
           }
         },
       },
