@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { Bell } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { SCHOOL_INFO } from '../config/schoolInfo';
 import PWAInstallButton from './PWAInstallButton';
+import NotificationSettingsModal from './NotificationSettingsModal';
 
 // `moduleKey: null` means "always visible to any logged-in user" — matches
 // routes that only ever check requireAuth (no role/permission gate) today,
@@ -37,6 +40,7 @@ export default function Layout({ children }) {
   // column on md+ screens — see the `md:` classes below, which override
   // the mobile transform/positioning entirely once there's room for it.
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   function closeSidebar() {
     setSidebarOpen(false);
@@ -75,8 +79,23 @@ export default function Layout({ children }) {
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <p className="font-display text-paper text-lg ml-3">The Register</p>
-        <PWAInstallButton compact />
+        <img
+          src={SCHOOL_INFO.logo}
+          alt={SCHOOL_INFO.name}
+          className="w-7 h-7 ml-2 rounded-full bg-white p-0.5 object-contain shrink-0"
+        />
+        <p className="font-display text-paper text-lg ml-2.5">The Register</p>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setNotifOpen(true)}
+            aria-label="Notification settings"
+            className="rounded border border-white/15 p-1.5 text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <Bell className="w-4 h-4" />
+          </button>
+          <PWAInstallButton compact />
+        </div>
       </div>
 
       {/* Backdrop: only rendered (and only clickable) while the mobile
@@ -101,12 +120,19 @@ export default function Layout({ children }) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="px-6 py-6 border-b border-white/10 flex items-center justify-between">
-          <div>
-            <p className="font-display text-paper text-xl leading-tight">The Register</p>
-            <p className="font-mono text-[10px] text-white/40 uppercase tracking-widest mt-1">
-              School Management System
-            </p>
+        <div className="px-5 py-5 border-b border-white/10 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src={SCHOOL_INFO.logo}
+              alt={SCHOOL_INFO.name}
+              className="w-10 h-10 rounded-full bg-white p-0.5 object-contain shrink-0"
+            />
+            <div className="min-w-0">
+              <p className="font-display text-paper text-xl leading-tight">The Register</p>
+              <p className="font-mono text-[10px] text-white/40 uppercase tracking-widest mt-1">
+                School Management System
+              </p>
+            </div>
           </div>
           {/* Close button: mobile only, since desktop never has this drawer
               "open" in a way that needs closing. */}
@@ -157,6 +183,17 @@ export default function Layout({ children }) {
 
         <div className="px-6 py-4 border-t border-white/10">
           <PWAInstallButton />
+          <button
+            type="button"
+            onClick={() => {
+              closeSidebar();
+              setNotifOpen(true);
+            }}
+            className="w-full flex items-center gap-2 rounded-md border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-white/85 hover:bg-white/10 hover:text-white transition-colors mb-3"
+          >
+            <Bell className="w-3.5 h-3.5 text-brass-light" />
+            <span>Notifications</span>
+          </button>
           <p className="text-white text-sm font-medium">{user?.name}</p>
           <p className="text-white/40 text-xs font-mono mb-3">{user?.role}</p>
           <button
@@ -176,6 +213,7 @@ export default function Layout({ children }) {
       <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">
         <div className="max-w-6xl mx-auto px-4 py-6 md:px-8 md:py-10">{children}</div>
       </main>
+      <NotificationSettingsModal open={notifOpen} onClose={() => setNotifOpen(false)} />
     </div>
   );
 }

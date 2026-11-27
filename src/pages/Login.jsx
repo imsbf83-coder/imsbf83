@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { SCHOOL_INFO } from '../config/schoolInfo';
 
 export default function Login() {
   const [identifier, setIdentifier] = useState('');
@@ -28,6 +29,11 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-ink px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
+          <img
+            src={SCHOOL_INFO.logo}
+            alt={SCHOOL_INFO.name}
+            className="w-16 h-16 mx-auto mb-3 rounded-full bg-white p-0.5 object-contain shadow-md"
+          />
           <p className="font-display text-paper text-3xl">The Register</p>
           <p className="font-mono text-[10px] text-white/40 uppercase tracking-widest mt-1">
             School Management System

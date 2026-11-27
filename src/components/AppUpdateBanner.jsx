@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, X } from 'lucide-react';
 import client from '../api/client';
+import { getReminderPrefs, sendLocalNotification } from '../utils/notifications';
 
 const CHECK_INTERVAL_MS = 2 * 60 * 1000;
 
@@ -20,6 +21,20 @@ export default function AppUpdateBanner() {
     typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : null
   );
   const initialBundleSrcRef = useRef(getCurrentBundleSrc());
+  const notifiedUpdateRef = useRef(false);
+
+  function notifyUpdate(reason) {
+    setUpdateReason(reason);
+    setDismissed(false);
+    if (!notifiedUpdateRef.current && getReminderPrefs().updateAlerts) {
+      notifiedUpdateRef.current = true;
+      sendLocalNotification({
+        id: 2001,
+        title: 'The Register — Update Available',
+        body: `${reason} Open the app and tap Update Now.`,
+      }).catch(() => {});
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -30,8 +45,7 @@ export default function AppUpdateBanner() {
         const reg = await navigator.serviceWorker.getRegistration();
         if (!reg) return;
         if (reg.waiting && active) {
-          setUpdateReason('A new app update is ready.');
-          setDismissed(false);
+          notifyUpdate('A new app update is ready.');
         }
         await reg.update();
       } catch {
@@ -54,8 +68,7 @@ export default function AppUpdateBanner() {
           return;
         }
         if (data.buildId !== initialBuildIdRef.current && active) {
-          setUpdateReason('A new version of The Register is available.');
-          setDismissed(false);
+          notifyUpdate('A new version of The Register is available.');
         }
       } catch {
         // Ignore network errors while offline
@@ -72,8 +85,7 @@ export default function AppUpdateBanner() {
         const html = await res.text();
         const match = html.match(/src="(\/assets\/[^"]+\.js)"/);
         if (match && match[1] && match[1] !== initialBundleSrcRef.current && active) {
-          setUpdateReason('A new web update has been published.');
-          setDismissed(false);
+          notifyUpdate('A new web update has been published.');
         }
       } catch {
         // Ignore network errors while offline
@@ -91,8 +103,7 @@ export default function AppUpdateBanner() {
           return;
         }
         if (remoteVersion !== initialBackendVersionRef.current && active) {
-          setUpdateReason('The server has been updated.');
-          setDismissed(false);
+          notifyUpdate('The server has been updated.');
         }
       } catch {
         // Ignore transient offline or cold-start errors
@@ -122,8 +133,7 @@ export default function AppUpdateBanner() {
               navigator.serviceWorker.controller &&
               active
             ) {
-              setUpdateReason('A new app update is ready.');
-              setDismissed(false);
+              notifyUpdate('A new app update is ready.');
             }
           });
         };
