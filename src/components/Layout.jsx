@@ -196,15 +196,20 @@ export default function Layout({ children }) {
           </button>
           <p className="text-white text-sm font-medium">{user?.name}</p>
           <p className="text-white/40 text-xs font-mono mb-3">{user?.role}</p>
-          <button
-            onClick={() => {
-              logout();
-              navigate('/login');
-            }}
-            className="text-xs text-white/60 hover:text-brass-light transition-colors"
-          >
-            Sign out →
-          </button>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+              className="text-xs text-white/60 hover:text-brass-light transition-colors"
+            >
+              Sign out →
+            </button>
+            <span className="font-mono text-[10px] text-white/35">
+              v{import.meta.env.VITE_APP_VERSION || '1.0.0'}
+            </span>
+          </div>
         </div>
       </aside>
 

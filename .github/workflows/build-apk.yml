@@ -18,6 +18,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set dynamic app version
+        run: |
+          VERSION_CODE=$((100 + GITHUB_RUN_NUMBER))
+          VERSION_NAME="1.0.${GITHUB_RUN_NUMBER}"
+          echo "ANDROID_VERSION_CODE=${VERSION_CODE}" >> "$GITHUB_ENV"
+          echo "ANDROID_VERSION_NAME=${VERSION_NAME}" >> "$GITHUB_ENV"
+          echo "VITE_APP_VERSION=${VERSION_NAME}" >> "$GITHUB_ENV"
+          echo "Building The Register v${VERSION_NAME} (versionCode ${VERSION_CODE})"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -28,6 +37,16 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
@@ -55,14 +74,14 @@ jobs:
           fi
           chmod +x android/gradlew
           cd android
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --max-workers=2 || (sleep 15 && ./gradlew assembleDebug --no-daemon --max-workers=2)
 
-      - name: Package APK artifact
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk The-Register-School-ERP.apk
+      - name: Package versioned APK artifact
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk "The-Register-School-ERP-v${ANDROID_VERSION_NAME}.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: The-Register-School-ERP-APK
-          path: The-Register-School-ERP.apk
+          name: The-Register-School-ERP-v${{ env.ANDROID_VERSION_NAME }}-APK
+          path: The-Register-School-ERP-v${{ env.ANDROID_VERSION_NAME }}.apk
           if-no-files-found: error

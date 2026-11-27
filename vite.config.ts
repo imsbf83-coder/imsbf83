@@ -117,6 +117,7 @@ export default defineConfig(() => {
               path.join(distDir, 'version.json'),
               JSON.stringify(
                 {
+                  version: process.env.VITE_APP_VERSION || '1.0.0',
                   buildId: APP_BUILD_ID,
                   builtAt: new Date().toISOString(),
                 },

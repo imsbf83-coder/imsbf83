@@ -14,7 +14,7 @@ import Reports from './pages/Reports';
 import Timetable from './pages/Timetable';
 import ProtectedRoute from './components/ProtectedRoute';
 import OfflineIndicator from './components/OfflineIndicator';
-import AppUpdateBanner from './components/AppUpdateBanner';
+import VersionCheckToast from './components/VersionCheckToast';
 
 export default function App() {
   return (
@@ -41,7 +41,7 @@ export default function App() {
         <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
       </Routes>
       <OfflineIndicator />
-      <AppUpdateBanner />
+      <VersionCheckToast />
     </>
   );
 }

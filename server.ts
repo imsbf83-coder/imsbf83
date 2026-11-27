@@ -88,6 +88,12 @@ async function startServer() {
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString(), bootId: SERVER_BOOT_ID });
   });
+  if (process.env.NODE_ENV !== 'production') {
+    app.get('/version.json', (_req, res) => {
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({ buildId: SERVER_BOOT_ID, builtAt: SERVER_BOOT_ID });
+    });
+  }
 
   app.use('/api/auth', authRoutes);
   app.use('/api/students', studentRoutes);
