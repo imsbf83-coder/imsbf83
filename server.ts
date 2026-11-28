@@ -29,6 +29,8 @@ const staffAccessRoutes = require('./backend/src/routes/staffAccess');
 const meRoutes = require('./backend/src/routes/me');
 const timetableRoutes = require('./backend/src/routes/timetable');
 const timetableArrangementRoutes = require('./backend/src/routes/timetableArrangements');
+const instituteRoutes = require('./backend/src/routes/institute');
+const { syncIfDue } = require('./backend/src/utils/suspensions');
 
 async function startServer() {
   const app = express();
@@ -82,7 +84,7 @@ async function startServer() {
     });
   }
 
-  app.use(express.json({ limit: '5mb' }));
+  app.use(express.json({ limit: '6mb' }));
 
   const SERVER_BOOT_ID = new Date().toISOString();
   app.get('/api/health', (_req, res) => {
@@ -94,6 +96,10 @@ async function startServer() {
       res.json({ buildId: SERVER_BOOT_ID, builtAt: SERVER_BOOT_ID });
     });
   }
+
+  app.use('/api', (_req, _res, next) => {
+    syncIfDue().then(() => next(), () => next());
+  });
 
   app.use('/api/auth', authRoutes);
   app.use('/api/students', studentRoutes);
@@ -109,6 +115,7 @@ async function startServer() {
   app.use('/api/me', meRoutes);
   app.use('/api/timetable/arrangements', timetableArrangementRoutes);
   app.use('/api/timetable', timetableRoutes);
+  app.use('/api/institute', instituteRoutes);
 
   // Return JSON 404 for unknown API endpoints
   app.use('/api', (_req, res) => {

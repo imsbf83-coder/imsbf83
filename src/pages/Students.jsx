@@ -67,6 +67,7 @@ const STATUS_OPTIONS = [
   { value: 'REGULAR', label: 'Regular' },
   { value: 'STRUCK_OFF', label: 'Struck Off' },
   { value: 'SLC', label: 'SLC' },
+  { value: 'SUSPENDED', label: 'Suspended' },
   { value: 'PASSOUT', label: 'Passout' },
 ];
 
@@ -161,6 +162,12 @@ export default function Students() {
   }
 
   const [withdrawalModal, setWithdrawalModal] = useState(null); // { studentId, studentName, status }
+  const [suspensionModal, setSuspensionModal] = useState(null); // { studentId, studentName }
+  const [deleteBlock, setDeleteBlock] = useState(null); // { studentId, studentName, error, links, duplicates }
+  const [keepNumber, setKeepNumber] = useState('');
+  const [mergeError, setMergeError] = useState('');
+  const [suspensionForm, setSuspensionForm] = useState({ startDate: '', endDate: '', reason: '', remarks: '' });
+  const [suspensionError, setSuspensionError] = useState('');
   const [withdrawalForm, setWithdrawalForm] = useState({ withdrawalDate: '', reason: '', transferCertIssued: false, remarks: '' });
 
   // --- Individual class/section edit (quick action) ---
@@ -309,15 +316,84 @@ export default function Students() {
     return new Date().toISOString().slice(0, 10);
   }
 
+  // "2026-11-27T00:00:00.000Z" -> "27-11-2026" (read straight from the date, no time zone shift)
+  function fmtDay(iso) {
+    return iso ? `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}` : '';
+  }
+
+  // the calendar day after a YYYY-MM-DD date
+  function dayAfter(ymd) {
+    const d = new Date(`${ymd}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  }
+
   function handleStatusChange(studentId, studentName, newStatus) {
+    const current = students.find((x) => x.id === studentId);
+    if (newStatus === 'SUSPENDED') {
+      openSuspension(studentId, studentName, null);
+      return;
+    }
     if (newStatus === 'REGULAR') {
-      handleReactivate(studentId);
+      if (current?.status === 'SUSPENDED') handleEndSuspension(studentId, studentName);
+      else handleReactivate(studentId);
       return;
     }
     // Exit statuses (STRUCK_OFF/SLC/PASSOUT) need a date and reason recorded
     // as a proper Withdrawal record, not just a silent status flip.
     setWithdrawalForm({ withdrawalDate: todayISO(), reason: '', transferCertIssued: false, remarks: '' });
     setWithdrawalModal({ studentId, studentName, status: newStatus });
+  }
+
+  // existing = the student's current suspension (to change its dates), or null for a new one
+  function openSuspension(studentId, studentName, existing) {
+    setSuspensionError('');
+    setSuspensionForm({
+      startDate: existing ? existing.startDate.slice(0, 10) : todayISO(),
+      endDate: existing ? existing.endDate.slice(0, 10) : '',
+      reason: existing?.reason || '',
+      remarks: existing?.remarks || '',
+    });
+    setSuspensionModal({ studentId, studentName });
+  }
+
+  async function submitSuspension(e) {
+    e.preventDefault();
+    if (!suspensionModal) return;
+    const { startDate, endDate } = suspensionForm;
+    if (!startDate || !endDate) {
+      setSuspensionError('Both the "from" and "till" dates are required.');
+      return;
+    }
+    if (endDate < startDate) {
+      setSuspensionError('The "till" date cannot be before the "from" date.');
+      return;
+    }
+    setSavingId(suspensionModal.studentId);
+    setSuspensionError('');
+    try {
+      await client.post(`/students/${suspensionModal.studentId}/suspend`, suspensionForm);
+      setSuspensionModal(null);
+      loadStudents(filters);
+    } catch (err) {
+      setSuspensionError(err.response?.data?.error || 'Could not save this suspension.');
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function handleEndSuspension(studentId, studentName) {
+    if (!window.confirm(`End the suspension of ${studentName} now and move them back to Regular?`)) return;
+    setSavingId(studentId);
+    setError('');
+    try {
+      await client.delete(`/students/${studentId}/suspension`);
+      loadStudents(filters);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not end this suspension.');
+    } finally {
+      setSavingId(null);
+    }
   }
 
   async function submitWithdrawal(e) {
@@ -370,16 +446,51 @@ export default function Students() {
   }
 
   async function handleDelete(studentId, studentName) {
-    if (!window.confirm(`Permanently delete ${studentName}? This cannot be undone. If they have attendance, exam, or bus payment history, use "Struck Off" / "SLC" status instead of deleting.`)) {
+    if (!window.confirm(`Permanently delete ${studentName}? This cannot be undone.`)) {
       return;
     }
     setSavingId(studentId);
     setError('');
+    setBulkMessage('');
     try {
       await client.delete(`/students/${studentId}`);
       loadStudents(filters);
     } catch (err) {
-      setError(err.response?.data?.error || 'Could not delete this student — they likely have linked attendance, exam, or bus payment records. Use "Struck Off" or "SLC" status instead.');
+      const data = err.response?.data;
+      if (err.response?.status === 409 && data?.links) {
+        // The student has attendance / marks / bus payments. Offer to move
+        // those onto the other (correct) entry instead of losing them.
+        setMergeError('');
+        setKeepNumber(data.duplicates?.[0]?.admissionNumber || '');
+        setDeleteBlock({ studentId, studentName, error: data.error, links: data.links, duplicates: data.duplicates || [] });
+      } else {
+        setError(data?.error || 'Could not delete this student. Please try again.');
+      }
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function submitMerge(e) {
+    e.preventDefault();
+    if (!deleteBlock) return;
+    if (!keepNumber.trim()) {
+      setMergeError('Enter the admission number of the entry you want to KEEP.');
+      return;
+    }
+    setSavingId(deleteBlock.studentId);
+    setMergeError('');
+    try {
+      const { data } = await client.post(`/students/${deleteBlock.studentId}/merge-into`, { keepAdmissionNumber: keepNumber.trim() });
+      const bits = [];
+      for (const [label, v] of [['attendance', data.attendance], ['exam results', data.examResults], ['bus payments', data.busPayments]]) {
+        if (v && (v.moved || v.dropped)) bits.push(`${label}: ${v.moved} moved${v.dropped ? `, ${v.dropped} already on the kept entry` : ''}`);
+      }
+      setBulkMessage(`${deleteBlock.studentName} was merged into ${data.kept.admissionNumber} and deleted.${bits.length ? ' ' + bits.join('; ') + '.' : ''}`);
+      setDeleteBlock(null);
+      loadStudents(filters);
+    } catch (err) {
+      setMergeError(err.response?.data?.error || 'Could not merge these entries.');
     } finally {
       setSavingId(null);
     }
@@ -745,7 +856,19 @@ export default function Students() {
                     </select>
                   </td>
                   <td className="px-4 py-3 text-slate2 text-xs">
-                    {s.status !== 'REGULAR' && s.withdrawal?.withdrawalDate
+                    {s.status === 'SUSPENDED' && s.suspensions?.[0] ? (
+                      <>
+                        <span className="whitespace-nowrap">
+                          {fmtDay(s.suspensions[0].startDate)} to {fmtDay(s.suspensions[0].endDate)}
+                        </span>
+                        <button
+                          onClick={() => openSuspension(s.id, `${s.firstName} ${s.lastName}`, s.suspensions[0])}
+                          className="block text-ink underline"
+                        >
+                          change dates
+                        </button>
+                      </>
+                    ) : s.status !== 'REGULAR' && s.withdrawal?.withdrawalDate
                       ? new Date(s.withdrawal.withdrawalDate).toLocaleDateString()
                       : s.status !== 'REGULAR' ? '—' : ''}
                   </td>
@@ -840,6 +963,139 @@ export default function Students() {
               <button
                 type="submit"
                 disabled={savingId === withdrawalModal.studentId}
+                className="text-sm px-4 py-2 rounded-md bg-present text-white hover:opacity-90 disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {deleteBlock && (
+        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <form
+            onSubmit={submitMerge}
+            className="bg-white border border-ink/10 rounded-lg p-6 w-full max-w-md"
+          >
+            <h3 className="text-sm font-medium text-ink mb-1">{deleteBlock.studentName} cannot be deleted directly</h3>
+            <p className="text-xs text-slate2 mb-3">{deleteBlock.error}</p>
+            <p className="text-xs text-slate2 mb-4">
+              If this is a duplicate entry of the same student, you can move these records onto the correct
+              entry and then delete this one. Where both entries already have a record for the same day, exam
+              subject or month, the entry you keep wins.
+            </p>
+
+            {deleteBlock.duplicates.length > 0 ? (
+              <div className="mb-3">
+                <p className="text-xs text-slate2 mb-1">Same-name entries found:</p>
+                <div className="space-y-1">
+                  {deleteBlock.duplicates.map((d) => (
+                    <button
+                      type="button"
+                      key={d.id}
+                      onClick={() => setKeepNumber(d.admissionNumber)}
+                      className={`w-full text-left text-sm border rounded-md px-3 py-2 ${
+                        keepNumber === d.admissionNumber ? 'border-ink bg-paper' : 'border-ink/20 hover:bg-paper'
+                      }`}
+                    >
+                      <span className="font-mono text-xs">{d.admissionNumber}</span> · {d.name} · {d.className} {d.section}
+                      <span className="block text-xs text-slate2">Father: {d.guardianName}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-late mb-3">No other entry with the same name was found. Type the admission number of the entry to keep.</p>
+            )}
+
+            <Field
+              label="Admission number of the entry to KEEP"
+              value={keepNumber}
+              onChange={setKeepNumber}
+              required
+            />
+            {mergeError && <p className="text-absent text-sm mt-2">{mergeError}</p>}
+
+            <div className="flex gap-2 justify-end mt-5">
+              <button
+                type="button"
+                onClick={() => setDeleteBlock(null)}
+                className="text-sm px-4 py-2 rounded-md border border-ink/20 hover:bg-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingId === deleteBlock.studentId}
+                className="text-sm px-4 py-2 rounded-md bg-absent text-white hover:opacity-90 disabled:opacity-50"
+              >
+                Move records and delete this entry
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {suspensionModal && (
+        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50 p-4">
+          <form
+            onSubmit={submitSuspension}
+            className="bg-white border border-ink/10 rounded-lg p-6 w-full max-w-md"
+          >
+            <h3 className="text-sm font-medium text-ink mb-1">Suspend {suspensionModal.studentName}</h3>
+            <p className="text-xs text-slate2 mb-4">
+              The student is suspended from the first date to the last date (both days included). They go back to
+              Regular automatically the day after the last day.
+            </p>
+
+            {suspensionError && <p className="text-absent text-sm mb-3">{suspensionError}</p>}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              <Field
+                label="Suspended from"
+                type="date"
+                value={suspensionForm.startDate}
+                onChange={(v) => setSuspensionForm({ ...suspensionForm, startDate: v })}
+                required
+              />
+              <Field
+                label="Suspended till (last day)"
+                type="date"
+                value={suspensionForm.endDate}
+                onChange={(v) => setSuspensionForm({ ...suspensionForm, endDate: v })}
+                required
+              />
+            </div>
+            {suspensionForm.endDate && suspensionForm.endDate >= suspensionForm.startDate && (
+              <p className="text-xs text-slate2 mb-3">
+                Back to Regular automatically on <strong>{fmtDay(dayAfter(suspensionForm.endDate))}</strong>.
+              </p>
+            )}
+            <div className="grid grid-cols-1 gap-3 mb-4">
+              <Field
+                label="Reason (optional)"
+                value={suspensionForm.reason}
+                onChange={(v) => setSuspensionForm({ ...suspensionForm, reason: v })}
+              />
+              <Field
+                label="Remarks (optional)"
+                value={suspensionForm.remarks}
+                onChange={(v) => setSuspensionForm({ ...suspensionForm, remarks: v })}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setSuspensionModal(null)}
+                className="text-sm px-4 py-2 rounded-md border border-ink/20 hover:bg-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingId === suspensionModal.studentId}
                 className="text-sm px-4 py-2 rounded-md bg-present text-white hover:opacity-90 disabled:opacity-50"
               >
                 Save
@@ -1113,6 +1369,7 @@ function statusPillClasses(status) {
     STRUCK_OFF: 'bg-absent/10 text-absent',
     SLC: 'bg-ink/10 text-ink',
     PASSOUT: 'bg-brass/10 text-brass-dark',
+    SUSPENDED: 'bg-late/10 text-late',
   };
   return colors[status] || '';
 }

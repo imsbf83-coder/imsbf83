@@ -99,7 +99,7 @@ define(['./workbox-afac4cd2'], (function (workbox) { 'use strict';
     "revision": "9abc5bdd3b2e6b5916826e780cabb2de"
   }, {
     "url": "index.html",
-    "revision": "664f6a3cc9f3a8b7d2ec459b4c43fbff"
+    "revision": "feb650bdee36c018ff78222035efe28d"
   }, {
     "url": "favicon.ico",
     "revision": "d5cee68eb4a7f2f50f9c1ccc08cce75d"
@@ -107,16 +107,22 @@ define(['./workbox-afac4cd2'], (function (workbox) { 'use strict';
     "url": "apple-touch-icon.png",
     "revision": "c352f23c6e4165918fee5bb19fd18eda"
   }, {
-    "url": "assets/web-CbnZRthO.js",
+    "url": "assets/web-LwJ6v-Zv.js",
     "revision": null
   }, {
-    "url": "assets/index-D0Axd7r2.css",
+    "url": "assets/index-D9JlDPpn.js",
     "revision": null
   }, {
-    "url": "assets/index-BXOnjqil.js",
+    "url": "assets/index-C56HcdpO.css",
     "revision": null
   }, {
     "url": "assets/aistudio/image_fa239a24.png",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_c809c3c0.png",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/image_708f6715.png",
     "revision": null
   }, {
     "url": "assets/aistudio/image_38acd0cc.png",

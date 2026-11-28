@@ -247,6 +247,43 @@ const SCHEMA = {
     uniques: [['id']],
     relations: {},
   },
+  institute: {
+    defaults: { createdAt: () => new Date(), updatedAt: () => new Date() },
+    uniques: [['id']],
+    relations: {
+      committeeMembers: { type: 'hasMany', model: 'instituteCommitteeMember', foreignKey: 'instituteId' },
+      files: { type: 'hasMany', model: 'instituteFile', foreignKey: 'instituteId' },
+      meetings: { type: 'hasMany', model: 'instituteMeeting', foreignKey: 'instituteId' },
+    },
+  },
+  instituteCommitteeMember: {
+    defaults: { sortOrder: 0, createdAt: () => new Date(), updatedAt: () => new Date() },
+    uniques: [['id']],
+    relations: {
+      institute: { type: 'belongsTo', model: 'institute', foreignKey: 'instituteId' },
+    },
+  },
+  instituteFile: {
+    defaults: { createdAt: () => new Date(), updatedAt: () => new Date() },
+    uniques: [['id']],
+    relations: {
+      institute: { type: 'belongsTo', model: 'institute', foreignKey: 'instituteId' },
+    },
+  },
+  instituteMeeting: {
+    defaults: { createdAt: () => new Date(), updatedAt: () => new Date() },
+    uniques: [['id']],
+    relations: {
+      institute: { type: 'belongsTo', model: 'institute', foreignKey: 'instituteId' },
+    },
+  },
+  studentSuspension: {
+    defaults: { createdAt: () => new Date(), updatedAt: () => new Date() },
+    uniques: [['id']],
+    relations: {
+      student: { type: 'belongsTo', model: 'student', foreignKey: 'studentId' },
+    },
+  },
 };
 
 const DATE_FIELDS = new Set([
