@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-android-apk:
@@ -78,6 +78,21 @@ jobs:
 
       - name: Package versioned APK artifact
         run: cp android/app/build/outputs/apk/debug/app-debug.apk "The-Register-School-ERP-v${ANDROID_VERSION_NAME}.apk"
+
+      - name: Publish GitHub Release with APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${ANDROID_VERSION_NAME}"
+          APK_FILE="The-Register-School-ERP-v${ANDROID_VERSION_NAME}.apk"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK_FILE" --clobber
+          else
+            gh release create "$TAG" "$APK_FILE" \
+              --title "The Register v${ANDROID_VERSION_NAME}" \
+              --notes "Automated Android APK build #${GITHUB_RUN_NUMBER} from commit ${GITHUB_SHA}." \
+              --latest
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

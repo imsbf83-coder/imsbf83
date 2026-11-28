@@ -10,10 +10,13 @@ const APP_BUILD_ID =
   process.env.GITHUB_SHA ||
   new Date().toISOString();
 
+const APP_VERSION = process.env.VITE_APP_VERSION || '1.0.0';
+
 export default defineConfig(() => {
   return {
     define: {
       __APP_BUILD_ID__: JSON.stringify(APP_BUILD_ID),
+      __APP_VERSION__: JSON.stringify(APP_VERSION),
     },
     plugins: [
       react(),

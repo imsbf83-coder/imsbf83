@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Bell, CheckCircle2, X } from 'lucide-react';
+import { Bell, CheckCircle2, RefreshCw, X } from 'lucide-react';
+import { checkForUpdate, getEmbeddedAppInfo } from '../utils/appUpdate';
 import {
   getNotificationPermission,
   getReminderPrefs,
@@ -83,6 +84,38 @@ export default function NotificationSettingsModal({ open, onClose }) {
       );
     } catch {
       setStatusMsg('Could not trigger test notification.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleCheckUpdates() {
+    setBusy(true);
+    setStatusMsg('');
+    try {
+      const result = await checkForUpdate();
+      if (!result?.checked) {
+        setStatusMsg('Could not reach update server. Check your internet connection.');
+        return;
+      }
+      if (result.hasUpdate) {
+        window.dispatchEvent(new CustomEvent('app:update-detected', { detail: result }));
+        setStatusMsg(`Update available: v${result.latestVersion} (installed v${result.currentVersion}).`);
+        if (permission === 'granted' && prefs.updateAlerts) {
+          await sendLocalNotification({
+            id: 2001,
+            title: `The Register — Update v${result.latestVersion} Available`,
+            body:
+              result.mode === 'native'
+                ? `A new Android app build (v${result.latestVersion}) is ready on GitHub.`
+                : 'A newer version is ready. Refresh to apply.',
+          }).catch(() => {});
+        }
+      } else {
+        setStatusMsg(`You are on the latest version (v${result.currentVersion}).`);
+      }
+    } catch {
+      setStatusMsg('Update check failed.');
     } finally {
       setBusy(false);
     }
@@ -201,22 +234,36 @@ export default function NotificationSettingsModal({ open, onClose }) {
           <p className="mt-3 rounded bg-ink/5 px-3 py-2 text-xs text-ink">{statusMsg}</p>
         )}
 
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            disabled={busy || !supported}
-            onClick={handleTest}
-            className="rounded border border-ink/20 bg-white px-3.5 py-2 text-xs font-medium text-ink hover:bg-ink/5 disabled:opacity-50"
-          >
-            Send Test Notification
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded bg-ink px-4 py-2 text-xs font-medium text-paper hover:bg-ink-light"
-          >
-            Done
-          </button>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+          <span className="font-mono text-[11px] text-slate2">
+            v{getEmbeddedAppInfo().version}
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={handleCheckUpdates}
+              className="inline-flex items-center gap-1.5 rounded border border-ink/20 bg-white px-3 py-2 text-xs font-medium text-ink hover:bg-ink/5 disabled:opacity-50"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Check Updates
+            </button>
+            <button
+              type="button"
+              disabled={busy || !supported}
+              onClick={handleTest}
+              className="rounded border border-ink/20 bg-white px-3 py-2 text-xs font-medium text-ink hover:bg-ink/5 disabled:opacity-50"
+            >
+              Test Alert
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded bg-ink px-4 py-2 text-xs font-medium text-paper hover:bg-ink-light"
+            >
+              Done
+            </button>
+          </div>
         </div>
       </div>
     </div>

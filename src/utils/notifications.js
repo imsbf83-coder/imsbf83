@@ -3,6 +3,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 
 const CHANNEL_ID = 'school-erp-alerts';
 const PREFS_KEY = 'register_notification_prefs_v1';
+const PROMPTED_KEY = 'register_notif_prompted_v1';
 const ATTENDANCE_REMINDER_ID = 1001;
 const TIMETABLE_REMINDER_ID = 1002;
 
@@ -90,6 +91,24 @@ export async function requestNotificationPermission() {
     return result === 'granted' ? 'granted' : 'denied';
   }
   return 'denied';
+}
+
+export async function ensureNotificationPermissionOnce() {
+  if (!isNativeNotifications()) return getNotificationPermission();
+  await ensureChannel();
+  const current = await getNotificationPermission();
+  if (current === 'granted' || current === 'denied') return current;
+
+  try {
+    if (localStorage.getItem(PROMPTED_KEY) === '1') {
+      return current;
+    }
+    localStorage.setItem(PROMPTED_KEY, '1');
+  } catch {
+    // Ignore storage errors
+  }
+
+  return requestNotificationPermission();
 }
 
 export async function sendLocalNotification({ title, body, id }) {
